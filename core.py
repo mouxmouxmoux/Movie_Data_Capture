@@ -113,6 +113,37 @@ def create_folder(json_data):  # 创建文件夹
 
     return os.path.normpath(path)
 
+# added by moux begin
+# 文件夹中包含[中字][破解][流出]等字样
+def create_folder(json_data,addon):  # 创建文件夹
+    title, studio, year, outline, runtime, director, actor_photo, release, number, cover, trailer, website, series, label = get_info(json_data)
+    conf = config.getInstance()
+    success_folder = conf.success_folder()
+    actor = json_data.get('actor')
+    location_rule = eval(conf.location_rule(), json_data)
+    maxlen = conf.max_title_len()
+    if 'title' in conf.location_rule() and len(title) > maxlen:
+        shorttitle = title[0:maxlen]
+        location_rule = location_rule.replace(title, shorttitle)
+    # 当演员为空时，location_rule被计算为'/number'绝对路径，导致路径连接忽略第一个路径参数，因此添加./使其始终为相对路径
+    location_rule = location_rule + addon
+    path = os.path.join(success_folder, f'./{location_rule.strip()}')
+    if not os.path.exists(path):
+        path = escape_path(path, conf.escape_literals())
+        try:
+            os.makedirs(path)
+        except:
+            path = success_folder + '/' + location_rule.replace('/[' + number + ')-' + title, "/number")
+            path = escape_path(path, conf.escape_literals())
+            try:
+                os.makedirs(path)
+            except:
+                print(f"[-]Fatal error! Can not make folder '{path}'")
+                os._exit(0)
+
+    return os.path.normpath(path)
+
+
 
 # =====================资源下载部分===========================
 
@@ -312,7 +343,11 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
     if config.getInstance().main_mode() == 3:  # 模式3下，由于视频文件不做任何改变，.nfo文件必须和视频文件名称除后缀外完全一致，KODI等软件方可支持
         nfo_path = str(Path(filepath).with_suffix('.nfo'))
     else:
-        nfo_path = os.path.join(path,f"{number}{part}{leak_word}{c_word}{hack_word}.nfo")
+        #nfo_path = os.path.join(path,f"{number}{part}{leak_word}{c_word}{hack_word}.nfo")
+        # added by moux begin
+        # 修改 nfo文件命名方式 按照naming_rule命名
+        nfo_path = os.path.join(path,f"{naming_rule}{part}{leak_word}{c_word}{hack_word}.nfo")
+        # added by moux end
     try:
         if not os.path.exists(path):
             try:
@@ -333,9 +368,17 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
         with open(nfo_path, "wt", encoding='UTF-8') as code:
             print('<?xml version="1.0" encoding="UTF-8" ?>', file=code)
             print("<movie>", file=code)
-            print("  <title><![CDATA[" + naming_rule + "]]></title>", file=code)
-            print("  <originaltitle><![CDATA[" + naming_rule + "]]></originaltitle>", file=code)
-            print("  <sorttitle><![CDATA[" + naming_rule + "]]></sorttitle>", file=code)
+            #print("  <title><![CDATA[" + naming_rule + "]]></title>", file=code)
+            #print("  <originaltitle><![CDATA[" + naming_rule + "]]></originaltitle>", file=code)
+            #print("  <sorttitle><![CDATA[" + naming_rule + "]]></sorttitle>", file=code)
+            
+            # added by moux begin
+            # 修改 nfo文件命名方式 按照naming_rule命名
+            print("  <title><![CDATA[" + title + "]]></title>", file=code)
+            print("  <originaltitle><![CDATA[" + title + "]]></originaltitle>", file=code)
+            print("  <sorttitle><![CDATA[" + title + "]]></sorttitle>", file=code)
+            # added by moux end
+            
             print("  <customrating>JP-18+</customrating>", file=code)
             print("  <mpaa>JP-18+</mpaa>", file=code)
             try:
@@ -534,8 +577,19 @@ def add_to_pic(pic_path, img_pic, size, count, mode):
         {'x': img_pic.width - scroll_wide, 'y': img_pic.height - scroll_high},
         {'x': 0, 'y': img_pic.height - scroll_high},
     ]
-    img_pic.paste(img_subt, (pos[count]['x'], pos[count]['y']), mask=a)
-    img_pic.save(pic_path, quality=95)
+    #img_pic.paste(img_subt, (pos[count]['x'], pos[count]['y']), mask=a)
+    #img_pic.save(pic_path, quality=95)
+    
+    # added by moux begin
+    # 水印可能会失败
+    try:
+        img_pic.paste(img_subt, (pos[count]['x'], pos[count]['y']), mask=a)
+        img_pic.save(pic_path, quality=95)
+    except Exception as e:
+            print(e)
+            print('[-]Cover cut failed!')
+    # added by moux end
+    
 # ========================结束=================================
 
 
@@ -596,6 +650,69 @@ def paste_file_to_folder(filepath, path, multi_part, number, part, leak_word, c_
         print(f'[-]OS Error errno {oserr.errno}')
         return
 
+# added by moux begin
+# 增加含命名方式参数的写文件函数
+def paste_file_to_folder(filepath, path, multi_part, number, part, leak_word, c_word, hack_word, naming_rule):  # 文件路径，番号，后缀，要移动至的位置
+    filepath_obj = pathlib.Path(filepath)
+    houzhui = filepath_obj.suffix
+    try:
+        #targetpath = os.path.join(path, f"{number}{leak_word}{c_word}{hack_word}{houzhui}")
+        # added by moux begin
+        # 修改文件名名称方式 加入naming_rule参数
+        targetpath = os.path.join(path, f"{naming_rule}{leak_word}{c_word}{hack_word}{houzhui}")
+        # added by moux end
+        # 任何情况下都不要覆盖，以免遭遇数据源或者引擎错误导致所有文件得到同一个number，逐一
+        # 同名覆盖致使全部文件损失且不可追回的最坏情况
+        if os.path.exists(targetpath):
+            raise FileExistsError('File Exists on destination path, we will never overwriting.')
+        link_mode = config.getInstance().link_mode()
+        # 如果link_mode 1: 建立软链接 2: 硬链接优先、无法建立硬链接再尝试软链接。
+        # 移除原先soft_link=2的功能代码，因默认记录日志，已经可追溯文件来源
+        create_softlink = False
+        if link_mode not in (1, 2):
+            shutil.move(filepath, targetpath)
+        elif link_mode == 2:
+            # 跨卷或跨盘符无法建立硬链接导致异常，回落到建立软链接
+            try:
+                os.link(filepath, targetpath, follow_symlinks=False)
+            except:
+                create_softlink = True
+        if link_mode == 1 or create_softlink:
+            # 先尝试采用相对路径，以便网络访问时能正确打开视频，失败则可能是因为跨盘符等原因无法支持
+            # 相对路径径，改用绝对路径方式尝试建立软链接
+            try:
+                filerelpath = os.path.relpath(filepath, path)
+                os.symlink(filerelpath, targetpath)
+            except:
+                os.symlink(str(filepath_obj.resolve()), targetpath)
+
+        sub_res = config.getInstance().sub_rule()
+        for subfile in filepath_obj.parent.glob('**/*'):
+            if subfile.is_file() and subfile.suffix.lower() in sub_res:
+                if multi_part and part.lower() not in subfile.name.lower():
+                    continue
+                if filepath_obj.stem.split('.')[0].lower() != subfile.stem.split('.')[0].lower():
+                    continue
+                sub_targetpath = Path(path) / f"{number}{leak_word}{c_word}{hack_word}{''.join(subfile.suffixes)}"
+                if link_mode not in (1, 2):
+                    shutil.move(str(subfile), str(sub_targetpath))
+                    print(f"[+]Sub Moved!        {sub_targetpath.name}")
+                else:
+                    shutil.copyfile(str(subfile), str(sub_targetpath))
+                    print(f"[+]Sub Copied!       {sub_targetpath.name}")
+        return
+
+    except FileExistsError as fee:
+        print(f'[-]FileExistsError: {fee}')
+        moveFailedFolder(filepath)
+        return
+    except PermissionError:
+        print('[-]Error! Please run as administrator!')
+        return
+    except OSError as oserr:
+        print(f'[-]OS Error errno {oserr.errno}')
+        return
+# added by moux end
 
 def paste_file_to_folder_mode2(filepath, path, multi_part, number, part, leak_word, c_word, hack_word):  # 文件路径，番号，后缀，要移动至的位置
     if multi_part == 1:
@@ -645,6 +762,57 @@ def paste_file_to_folder_mode2(filepath, path, multi_part, number, part, leak_wo
         print(f'[-]OS Error errno  {oserr.errno}')
         return
 
+def paste_file_to_folder_mode2(filepath, path, multi_part, number, part, leak_word, c_word, hack_word, naming_rule):  # 文件路径，番号，后缀，要移动至的位置
+    if multi_part == 1:
+        number += part  # 这时number会被附加上CD1后缀
+    filepath_obj = pathlib.Path(filepath)
+    houzhui = filepath_obj.suffix
+    #targetpath = os.path.join(path, f"{number}{part}{leak_word}{c_word}{hack_word}{houzhui}")
+    # added by moux begin
+    # 修改文件名名称方式 加入naming_rule参数
+    targetpath = os.path.join(path, f"{naming_rule}{leak_word}{c_word}{hack_word}{houzhui}")
+    # added by moux end
+    if os.path.exists(targetpath):
+        raise FileExistsError('File Exists on destination path, we will never overwriting.')
+    try:
+        link_mode = config.getInstance().link_mode()
+        create_softlink = False
+        if link_mode not in (1, 2):
+            shutil.move(filepath, targetpath)
+        elif link_mode == 2:
+            try:
+                os.link(filepath, targetpath, follow_symlinks=False)
+            except:
+                create_softlink = True
+        if link_mode == 1 or create_softlink:
+            try:
+                filerelpath = os.path.relpath(filepath, path)
+                os.symlink(filerelpath, targetpath)
+            except:
+                os.symlink(str(filepath_obj.resolve()), targetpath)
+
+        sub_res = config.getInstance().sub_rule()
+        for subfile in filepath_obj.parent.glob('**/*'):
+            if subfile.is_file() and subfile.suffix.lower() in sub_res:
+                if multi_part and part.lower() not in subfile.name.lower():
+                    continue
+                sub_targetpath = Path(path) / f"{number}{leak_word}{c_word}{hack_word}{''.join(subfile.suffixes)}"
+                if link_mode not in (1, 2):
+                    shutil.move(str(subfile), str(sub_targetpath))
+                    print(f"[+]Sub Moved!        {sub_targetpath.name}")
+                else:
+                    shutil.copyfile(str(subfile), str(sub_targetpath))
+                    print(f"[+]Sub Copied!       {sub_targetpath.name}")
+        return
+    except FileExistsError as fee:
+        print(f'[-]FileExistsError: {fee}')
+        return
+    except PermissionError:
+        print('[-]Error! Please run as administrator!')
+        return
+    except OSError as oserr:
+        print(f'[-]OS Error errno  {oserr.errno}')
+        return
 
 def linkImage(path, number, part, leak_word, c_word, hack_word, ext):
     """
@@ -799,6 +967,13 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
             re.I) or '中文' in movie_path or '字幕' in movie_path:
         cn_sub = '1'
         c_word = '-C'  # 中文字幕影片后缀
+        
+    # added by moux begin
+    # 处理中文字幕其他形式
+    if '中字' in movie_path:
+        cn_sub = '1'
+        c_word = '-C'  # 中文字幕影片后缀
+    # added by moux end
 
     # 判断是否无码
     unce = json_data.get('无码')
@@ -822,19 +997,49 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
     # 创建文件夹
     #path = create_folder(rootpath + '/' + conf.success_folder(),  json_data.get('location_rule'), json_data)
 
+    # added by moux begin
+    # 处理c_word leak_word hack_word 按照自定义文字输出
+    addon = ''
+    if leak == 1 or leak == '1':
+        leak_word = '[流出]'
+        addon = addon + leak_word
+    if cn_sub == 1 or cn_sub == '1':
+        c_word = '[中字]'
+        addon = addon + c_word
+    if hack == 1 or hack == '1':
+        hack_word = '[破解]'
+        addon = addon + hack_word
+    # added by moux end
 
     cover = json_data.get('cover')
     ext = image_ext(cover)
     fanart_path =  f"{number}{leak_word}{c_word}{hack_word}-fanart{ext}"
     poster_path = f"{number}{leak_word}{c_word}{hack_word}-poster{ext}"
     thumb_path =  f"{number}{leak_word}{c_word}{hack_word}-thumb{ext}"
+    
+    # added by moux begin
+    # fanart_path poster_path thumb_path 按照自定义文字输出
+    # 增加videofile_path_pre 按照自定义文字输出视频文件名
+    # 修改thumb_path 为-cover 为预览图生成空出文件名
+    fanart_path = f"{json_data.get('naming_rule')}{addon}-fanart{ext}"
+    poster_path = f"{json_data.get('naming_rule')}{addon}-poster{ext}"
+    thumb_path =  f"{json_data.get('naming_rule')}{addon}-cover{ext}"
+    videofile_path_pre = ''
+    videofile_path_pre = f"{json_data.get('naming_rule')}{addon}"
+    # added by moux end
+    
+    
     # main_mode
     #  1: 刮削模式 / Scraping mode
     #  2: 整理模式 / Organizing mode
     #  3：不改变路径刮削
     if conf.main_mode() == 1:
         # 创建文件夹
-        path = create_folder(json_data)
+        #path = create_folder(json_data)
+        # added by moux begin
+        # 增加文件夹后缀
+        path = create_folder(json_data,addon)
+         # added by moux end
         if multi_part == 1:
             number += part  # 这时number会被附加上CD1后缀
 
@@ -882,7 +1087,12 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
             linkImage(path, number_th, part, leak_word, c_word, hack_word, ext)
 
         # 移动电影
-        paste_file_to_folder(movie_path, path, multi_part, number, part, leak_word, c_word, hack_word)
+        #paste_file_to_folder(movie_path, path, multi_part, number, part, leak_word, c_word, hack_word)
+        
+        # added by moux begin
+        # 替换上面的命令移动电影 操作修改 文件名按照naming_rule命名
+        paste_file_to_folder(movie_path, path, multi_part, number, part, leak_word, c_word, hack_word, json_data.get('naming_rule'))
+        # added by moux end
 
         # 最后输出.nfo元数据文件，以完成.nfo文件创建作为任务成功标志
         print_files(path, leak_word, c_word,  json_data.get('naming_rule'), part, cn_sub, json_data, movie_path, tag,  json_data.get('actor_list'), liuchu, uncensored, hack_word

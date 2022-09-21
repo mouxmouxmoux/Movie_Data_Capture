@@ -111,8 +111,13 @@ def get_data_from_json(file_number, oCC, specified_source, specified_url):
         tag.remove('XXXX')
     while 'xxx' in tag:
         tag.remove('xxx')
-    actor = str(actor_list).strip("[ ]").replace("'", '').replace(" ", '')
-
+    #actor = str(actor_list).strip("[ ]").replace("'", '').replace(" ", '')
+    # added by moux begin
+    # actor不用逗号连接
+    actor= ']['.join(actor_list).replace("'", '').replace(" ", '')
+    if actor == '':
+        actor = '未知演员'
+    # added by moux end
     if title == '' or number == '':
         print('[-]Movie Number or Title not found!')
         return None
@@ -141,6 +146,16 @@ def get_data_from_json(file_number, oCC, specified_source, specified_url):
     json_data['original_title'] = title
     json_data['actor'] = actor
     json_data['release'] = release
+    # added by moux begin
+    # 增加月份记录
+    json_data['release_month'] = str(release[5:7])
+     # 增加首位演员记录
+    first_actor = actor_list[0]
+    if first_actor == '':
+        json_data['first_actor'] = '未知演员'
+    else:
+        json_data['first_actor'] = first_actor
+    # added by moux end
     json_data['cover_small'] = cover_small
     json_data['tag'] = tag
     json_data['year'] = year
