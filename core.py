@@ -860,7 +860,7 @@ def debug_print(data: json):
             if i == 'extrafanart':
                 print('[+]  -', "%-19s" % i, ':', len(v), 'links')
                 continue
-            print(f'[+]  - {i:<{cnspace(i,19)}} : {v}')
+            print(f'[+]  - {i:<{cn_space(i, 19)}} : {v}')
 
         print("[+] ------- DEBUG INFO -------")
     except:
@@ -941,7 +941,7 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
     hack_word = ''
 
     # 下面被注释的变量不需要
-    #rootpath= os.getcwd
+    # rootpath = os.getcwd
     number = number_th
     json_data = get_data_from_json(number, oCC, specified_source, specified_url)  # 定义番号
 
