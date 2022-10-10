@@ -8,7 +8,7 @@ $FACE_RECOGNITION_MODELS=$(python -c 'import face_recognition_models as _; print
 mkdir build
 mkdir __pycache__
 
-pyinstaller --onefile Movie_Data_Capture.py `
+C:\Users\bwyun\AppData\Roaming\Python\Python39\Scripts\pyinstaller --onefile Movie_Data_Capture.py `
     --hidden-import "ImageProcessing.cnn" `
     --python-option u `
     --add-data "$FACE_RECOGNITION_MODELS;face_recognition_models" `

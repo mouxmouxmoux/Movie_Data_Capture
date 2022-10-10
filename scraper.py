@@ -113,8 +113,11 @@ def get_data_from_json(file_number, oCC, specified_source, specified_url):
         tag.remove('xxx')
     #actor = str(actor_list).strip("[ ]").replace("'", '').replace(" ", '')
     # added by moux begin
-    # actor不用逗号连接
-    actor= ']['.join(actor_list).replace("'", '').replace(" ", '')
+    # actor不用逗号连接 并且只记录前3个
+    if len(actor_list) > 3: 
+        actor= ']['.join(actor_list[0:3]).replace("'", '').replace(" ", '')
+    else:
+        actor= ']['.join(actor_list).replace("'", '').replace(" ", '')
     if actor == '':
         actor = '未知演员'
     # added by moux end

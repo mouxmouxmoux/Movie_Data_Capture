@@ -4,6 +4,7 @@
     // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
         {
             "name": "Python: 当前文件",
             "type": "python",
@@ -13,11 +14,6 @@
                 "PYTHONIOENCODING": "utf-8"
             },
             "program": "${workspaceFolder}/Movie_Data_capture.py",
-            "program1": "${workspaceFolder}/WebCrawler/javbus.py",
-            "program2": "${workspaceFolder}/WebCrawler/javdb.py",
-            "program3": "${workspaceFolder}/WebCrawler/xcity.py",
-            "program4": "${workspaceFolder}/number_parser.py",
-            "program5": "${workspaceFolder}/config.py",
             "cwd0": "${fileDirname}",
             "cwd1": "${workspaceFolder}/dist",
             "cwd2": "${env:HOME}${env:USERPROFILE}/.mdc",
