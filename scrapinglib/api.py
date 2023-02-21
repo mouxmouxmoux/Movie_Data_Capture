@@ -3,6 +3,7 @@
 import re
 import json
 
+import config
 from .airav import Airav
 from .carib import Carib
 from .dlsite import Dlsite
@@ -11,7 +12,6 @@ from .gcolle import Gcolle
 from .getchu import Getchu
 from .jav321 import Jav321
 from .javdb import Javdb
-from .mv91 import Mv91
 from .fc2 import Fc2
 from .madou import Madou
 from .mgstage import Mgstage
@@ -19,6 +19,8 @@ from .javbus import Javbus
 from .xcity import Xcity
 from .avsox import Avsox
 from .javlibrary import Javlibrary
+from .javday import Javday
+from .pissplay import Pissplay
 
 from .tmdb import Tmdb
 from .imdb import Imdb
@@ -50,8 +52,8 @@ class Scraping:
     """
     """
     adult_full_sources = ['javlibrary', 'javdb', 'javbus', 'airav', 'fanza', 'xcity', 'jav321',
-                          'mgstage', 'fc2', 'avsox', 'dlsite', 'carib', 'madou', 'mv91',
-                          'getchu', 'gcolle'
+                          'mgstage', 'fc2', 'avsox', 'dlsite', 'carib', 'madou', 
+                          'getchu', 'gcolle','javday','pissplay'
                           ]
     adult_func_mapping = {
         'avsox': Avsox().scrape,
@@ -65,11 +67,12 @@ class Scraping:
         'fanza': Fanza().scrape,
         'airav': Airav().scrape,
         'carib': Carib().scrape,
-        'mv91': Mv91().scrape,
         'gcolle': Gcolle().scrape,
         'javdb': Javdb().scrape,
         'getchu': Getchu().scrape,
         'javlibrary': Javlibrary().scrape,
+        'javday': Javday().scrape,
+        'pissplay': Pissplay().scrape
     }
 
     general_full_sources = ['tmdb', 'imdb']
@@ -131,7 +134,8 @@ class Scraping:
                     pass
                 # if any service return a valid return, break
                 if self.get_data_state(json_data):
-                    print(f"[+]Find movie [{name}] metadata on website '{source}'")
+                    if self.debug:
+                        print(f"[+]Find movie [{name}] metadata on website '{source}'")
                     break
             except:
                 continue
@@ -146,6 +150,8 @@ class Scraping:
     def searchAdult(self, number, sources):
         if self.specifiedSource:
             sources = [self.specifiedSource]
+        elif type(sources) is list:
+            pass
         else:
             sources = self.checkAdultSources(sources, number)
         json_data = {}
@@ -165,11 +171,33 @@ class Scraping:
                     # json_data = self.func_mapping[source](number, self)
                 # if any service return a valid return, break
                 if self.get_data_state(json_data):
-                    print(f"[+]Find movie [{number}] metadata on website '{source}'")
+                    if self.debug:
+                        print(f"[+]Find movie [{number}] metadata on website '{source}'")
                     break
             except:
                 continue
-
+            
+        # javdb的封面有水印，如果可以用其他源的封面来替换javdb的封面
+        if 'source' in json_data and json_data['source'] == 'javdb':
+            # search other sources
+            other_sources = sources[sources.index('javdb') + 1:]
+            while other_sources:
+            # If cover not found in other source, then skip using other sources using javdb cover instead
+                try:
+                    other_json_data = self.searchAdult(number, other_sources)
+                    if other_json_data is not None and 'cover' in other_json_data and other_json_data['cover'] != '':
+                        json_data['cover'] = other_json_data['cover']
+                        if self.debug:
+                            print(f"[+]Find movie [{number}] cover on website '{other_json_data['cover']}'")
+                        break
+                    # 当不知道source为何时，只能停止搜索
+                    if 'source' not in other_json_data:
+                        break
+                    # check other sources
+                    other_sources = sources[sources.index(other_json_data['source']) + 1:]
+                except:
+                    pass
+            
         # Return if data not found in all sources
         if not json_data:
             print(f'[-]Movie Number [{number}] not found!')
@@ -241,11 +269,12 @@ class Scraping:
         # check sources in func_mapping
         todel = []
         for s in sources:
-            if not s in self.adult_func_mapping:
+            if not s in self.adult_func_mapping and config.getInstance().debug():
                 print('[!] Source Not Exist : ' + s)
                 todel.append(s)
         for d in todel:
-            print('[!] Remove Source : ' + s)
+            if config.getInstance().debug():
+                print('[!] Remove Source : ' + s)
             sources.remove(d)
         return sources
 

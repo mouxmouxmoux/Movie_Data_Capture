@@ -99,6 +99,10 @@ def get_data_from_json(
 
     # ================================================网站规则添加结束================================================
 
+    if json_data.get('title') == '':
+        print('[-]Movie Number or Title not found!')
+        return None
+
     title = json_data.get('title')
     actor_list = str(json_data.get('actor')).strip("[ ]").replace("'", '').split(',')  # 字符串转列表
     actor_list = [actor.strip() for actor in actor_list]  # 去除空白
@@ -134,10 +138,15 @@ def get_data_from_json(
         tag.remove('XXXX')
     while 'xxx' in tag:
         tag.remove('xxx')
+    if json_data['source'] =='pissplay': # pissplay actor为英文名，不用去除空格
+        actor = str(actor_list).strip("[ ]").replace("'", '')
+    else:
+        actor = str(actor_list).strip("[ ]").replace("'", '').replace(" ", '')
+
     #actor = str(actor_list).strip("[ ]").replace("'", '').replace(" ", '')
     # added by moux begin
     # actor不用逗号连接 并且只记录前3个
-    if len(actor_list) > 3: 
+    if len(actor_list) > 3:
         actor= ']['.join(actor_list[0:3]).replace("'", '').replace(" ", '')
     else:
         actor= ']['.join(actor_list).replace("'", '').replace(" ", '')
@@ -169,6 +178,7 @@ def get_data_from_json(
 
     # 返回处理后的json_data
     json_data['title'] = title
+    json_data['original_title'] = title
     json_data['actor'] = actor
     json_data['release'] = release
     json_data['original_title'] = '[' + number + '][' + actor + '][' + release + ']' +  title

@@ -169,13 +169,13 @@ class Config:
             self._exit("common:main_mode")
 
     def source_folder(self) -> str:
-        return self.conf.get("common", "source_folder")
+        return self.conf.get("common", "source_folder").replace("\\\\", "/").replace("\\", "/")
 
     def failed_folder(self) -> str:
-        return self.conf.get("common", "failed_output_folder")
+        return self.conf.get("common", "failed_output_folder").replace("\\\\", "/").replace("\\", "/")
 
     def success_folder(self) -> str:
-        return self.conf.get("common", "success_output_folder")
+        return self.conf.get("common", "success_output_folder").replace("\\\\", "/").replace("\\", "/")
 
     def actor_gender(self) -> str:
         return self.conf.get("common", "actor_gender")
@@ -212,6 +212,12 @@ class Config:
 
     def mapping_table_validity(self) -> int:
         return self.conf.getint("common", "mapping_table_validity")
+
+    def jellyfin(self) -> int:
+        return self.conf.getint("common", "jellyfin")
+
+    def actor_only_tag(self) -> bool:
+        return self.conf.getboolean("common", "actor_only_tag")
 
     def sleep(self) -> int:
         return self.conf.getint("common", "sleep")
@@ -325,6 +331,12 @@ class Config:
         except:
             return 50
 
+    def image_naming_with_number(self) -> bool:
+        try:
+            return self.conf.getboolean("Name_Rule", "image_naming_with_number")
+        except:
+            return False
+
     def update_check(self) -> bool:
         try:
             return self.conf.getboolean("update", "update_check")
@@ -431,6 +443,7 @@ class Config:
         conf.set(sec1, "ignore_failed_list", 0)
         conf.set(sec1, "download_only_missing_images", 1)
         conf.set(sec1, "mapping_table_validity", 7)
+        conf.set(sec1, "jellyfin", 0)
 
         sec2 = "advenced_sleep"
         conf.add_section(sec2)
