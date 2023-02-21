@@ -169,9 +169,9 @@ def get_data_from_json(
 
     # 返回处理后的json_data
     json_data['title'] = title
-    json_data['original_title'] = title
     json_data['actor'] = actor
     json_data['release'] = release
+    json_data['original_title'] = '[' + number + '][' + actor + '][' + release + ']' +  title
     # added by moux begin
     # 增加月份记录
     json_data['release_month'] = str(release[5:7])

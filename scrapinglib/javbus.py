@@ -39,10 +39,7 @@ class Javbus(Parser):
                 result = self.dictformat(htmltree)
                 return result
             url = "https://www." + secrets.choice([
-                'buscdn.fun', 'busdmm.fun', 'busfan.fun', 'busjav.fun',
-                'cdnbus.fun',
-                'dmmbus.fun', 'dmmsee.fun',
-                'seedmm.fun',
+                'javbus.com', 'javsee.cam', 'javsee.info', 'seejav.one',
                 ]) + "/"
             try:
                 self.detailurl = url + number
