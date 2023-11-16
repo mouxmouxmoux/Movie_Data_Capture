@@ -4,6 +4,7 @@ import json
 import re
 from lxml import etree, html
 
+import config
 from . import httprequest
 from .utils import getTreeElement, getTreeAll
 
@@ -85,7 +86,7 @@ class Parser:
         else:
             self.detailurl = self.queryNumberUrl(number)
         if not self.detailurl:
-            return None
+            return 404
         htmltree = self.getHtmlTree(self.detailurl)
         result = self.dictformat(htmltree)
         return result
@@ -166,7 +167,8 @@ class Parser:
             }
             dic = self.extradict(dic)
         except Exception as e:
-            #print(e)
+            if config.getInstance().debug():
+                print(e)
             dic = {"title": ""}
         js = json.dumps(dic, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
         return js
@@ -210,7 +212,13 @@ class Parser:
 
     def getTags(self, htmltree) -> list:
         alls = self.getTreeAll(htmltree, self.expr_tags)
-        return [ x.strip() for x in alls if x.strip()]
+        tags = []
+        for t in alls:
+            for tag in t.strip().split(','):
+                tag = tag.strip()
+                if tag:
+                    tags.append(tag)
+        return tags
 
     def getStudio(self, htmltree):
         return self.getTreeElementbyExprs(htmltree, self.expr_studio, self.expr_studio2)

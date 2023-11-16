@@ -301,8 +301,8 @@ def get_html_by_scraper(url: str = None, cookies: dict = None, ua: str = None, r
 
 def translate(
         src: str,
-        target_language: str = "zh_cn",
-        engine: str = "google-free",
+        target_language: str = config.getInstance().get_target_language(),
+        engine: str = config.getInstance().get_translate_engine(),
         app_id: str = "",
         key: str = "",
         delay: int = 0,
@@ -314,7 +314,7 @@ def translate(
     """
     trans_result = ""
     # 中文句子如果包含&等符号会被谷歌翻译截断损失内容，而且中文翻译到中文也没有意义，故而忽略，只翻译带有日语假名的
-    if not is_japanese(src):
+    if (is_japanese(src) == False) and ("zh_" in target_language):
         return src
     if engine == "google-free":
         gsite = config.getInstance().get_translate_service_site()
@@ -343,7 +343,15 @@ def translate(
         result = post_html(url=url, query=body, headers=headers)
         translate_list = [i["text"] for i in result.json()[0]["translations"]]
         trans_result = trans_result.join(translate_list)
-
+    elif engine == "deeplx":
+        url = config.getInstance().get_translate_service_site()
+        res = requests.post(f"{url}/translate", json={
+            'text': src,
+            'source_lang': 'auto',
+            'target_lang': target_language,
+        })
+        if res.text.strip():
+            trans_result = res.json().get('data')
     else:
         raise ValueError("Non-existent translation engine")
 
