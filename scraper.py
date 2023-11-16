@@ -3,6 +3,7 @@ import json
 import secrets
 import typing
 from pathlib import Path
+import re
 
 # third party lib
 import opencc
@@ -119,7 +120,8 @@ def get_data_from_json(
     label = json_data.get('label')
     series = json_data.get('series')
     year = json_data.get('year')
-
+    userrating = json_data.get('userrating')
+    votes = json_data.get('uservotes')
     if json_data.get('cover_small'):
         cover_small = json_data.get('cover_small')
     else:
@@ -210,6 +212,9 @@ def get_data_from_json(
     json_data['series'] = series
     json_data['studio'] = studio
     json_data['director'] = director
+    json_data['userrating'] = userrating
+    json_data['votes'] = votes
+
 
     if conf.is_translate():
         translate_values = conf.translate_values().split(",")
@@ -316,6 +321,7 @@ def get_data_from_json(
         else:
             item = json_data.get(i)
             naming_rule += item if type(item) is not list else "&".join(item)
+    naming_rule = naming_rule_special_characters_replacement(naming_rule)
             # PATCH：处理[title]存在翻译的情况，后续NFO文件的original_name只会直接沿用naming_rule,这导致original_name非原始名
             # 理应在翻译处处理 naming_rule和original_naming_rule
             if i == 'title':
@@ -345,3 +351,10 @@ def special_characters_replacement(text) -> str:
             replace('&amp;', '＆').
             replace("&", '＆')
             )
+
+def naming_rule_special_characters_replacement(text) -> str:
+    if not isinstance(text, str):
+        return text
+    r_str = r"[\/\\\:\*\?\"\<\>#\.\|\n\s/\:*?\"<>\|~，、。？！@#￥%……&*（）——+：；《》]+~"
+    new_title = re.sub('__', '_', re.sub(r_str, "_", special_characters_replacement(text)))
+    return (new_title)

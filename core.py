@@ -392,9 +392,16 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
                       file=code)
                 print("  <sorttitle><![CDATA[" + naming_rule + "]]></sorttitle>", file=code)
             else:
-                print("  <title>" + naming_rule + "</title>", file=code)
-                print("  <originaltitle>" + json_data['original_naming_rule'] + "</originaltitle>", file=code)
-                print("  <sorttitle>" + naming_rule + "</sorttitle>", file=code)
+                # print("  <title>" + naming_rule + "</title>", file=code)
+                # print("  <originaltitle>" + naming_rule + "</originaltitle>", file=code)
+                # print("  <sorttitle>" + naming_rule + "</sorttitle>", file=code)
+                # added by moux begin
+                # 修改 nfo文件命名方式 不按照naming_rule命名
+                print("  <title>[" + number + ']' +  title + "</title>", file=code)
+                print("  <originaltitle>[" + number + ']' + title + "</originaltitle>", file=code)
+                print("  <sorttitle>[" + number + ']' + title + "</sorttitle>", file=code)
+                # added by moux end
+
             print("  <customrating>JP-18+</customrating>", file=code)
             print("  <mpaa>JP-18+</mpaa>", file=code)
             try:
@@ -460,7 +467,7 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
             if cn_sub:
                 print("  <genre>中文字幕</genre>", file=code)
             if liuchu:
-                print("  <genre>无码流出</genre>", file=code)
+                print("  <genre>流出</genre>", file=code)
             if uncensored:
                 print("  <genre>无码</genre>", file=code)
             if hack:
@@ -915,7 +922,8 @@ def core_main_no_net_op(movie_path, number):
         part = re.findall('[-_]CD\d+', movie_path, re.IGNORECASE)[0].upper()
         multi = True
     if re.search(r'[-_]C(\.\w+$|-\w+)|\d+ch(\.\w+$|-\w+)', movie_path,
-                 re.I) or '中文' in movie_path or '字幕' in movie_path or ".chs" in movie_path or '.cht' in movie_path:
+                 re.I) or '中文' in movie_path or '字幕' in movie_path or ".chs" in movie_path \
+            or '.cht' in movie_path or '-UC' in movie_path or '-CU' in movie_path:
         cn_sub = True
         c_word = '-C'  # 中文字幕影片后缀
     uncensored = True if is_uncensored(number) else 0
@@ -923,7 +931,8 @@ def core_main_no_net_op(movie_path, number):
         leak_word = '-无码流出'  # 无码流出影片后缀
         leak = True
 
-    if 'hack'.upper() in str(movie_path).upper() or '破解' in movie_path:
+    if 'hack'.upper() in str(movie_path).upper() or '破解' in movie_path or '-U' in movie_path or '-UC' in movie_path \
+            or '-CU' in movie_path:
         hack = True
         hack_word = "-hack"
 
@@ -1038,7 +1047,8 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
         multi_part = True
         part = re.findall('[-_]CD\d+', movie_path, re.IGNORECASE)[0].upper()
     if re.search(r'[-_]C(\.\w+$|-\w+)|\d+ch(\.\w+$|-\w+)', movie_path,
-                 re.I) or '中文' in movie_path or '字幕' in movie_path:
+                 re.I) or '中文' in movie_path or '字幕' in movie_path or '中字' in movie_path or ".chs" in movie_path \
+            or '.cht' in movie_path or '-UC' in movie_path or '-CU' in movie_path:
         cn_sub = True
         c_word = '-C'  # 中文字幕影片后缀
 
@@ -1063,7 +1073,8 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
     else:
         leak = False
 
-    if 'hack'.upper() in str(movie_path).upper() or '破解' in movie_path:
+    if 'hack'.upper() in str(movie_path).upper() or '破解' in movie_path or '-U' in movie_path or '-UC' in movie_path \
+            or '-CU' in movie_path:
         hack = True
         hack_word = "-hack"
 
@@ -1078,7 +1089,7 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
         tag.remove('4K')  # 从tag中移除'4K'
 
     # 判断是否为无码破解
-    if '无码破解' in tag:
+    if '无码破解' in tag or '破解' in tag:
         tag.remove('无码破解')  # 从tag中移除'无码破解'
 
     # try:
@@ -1098,13 +1109,13 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
     # added by moux begin
     # 处理c_word leak_word hack_word 按照自定义文字输出
     addon = ''
-    if leak == 1 or leak == '1':
+    if leak:
         leak_word = '[流出]'
         addon = addon + leak_word
-    if cn_sub == 1 or cn_sub == '1':
+    if cn_sub:
         c_word = '[中字]'
         addon = addon + c_word
-    if hack == 1 or hack == '1':
+    if hack:
         hack_word = '[破解]'
         addon = addon + hack_word
     # added by moux end
