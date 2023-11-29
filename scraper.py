@@ -321,13 +321,13 @@ def get_data_from_json(
         else:
             item = json_data.get(i)
             naming_rule += item if type(item) is not list else "&".join(item)
-    naming_rule = naming_rule_special_characters_replacement(naming_rule)
             # PATCH：处理[title]存在翻译的情况，后续NFO文件的original_name只会直接沿用naming_rule,这导致original_name非原始名
             # 理应在翻译处处理 naming_rule和original_naming_rule
             if i == 'title':
                 item = json_data.get('original_title')
             original_naming_rule += item if type(item) is not list else "&".join(item)
 
+    naming_rule = naming_rule_special_characters_replacement(naming_rule)
     json_data['naming_rule'] = naming_rule
     json_data['original_naming_rule'] = original_naming_rule
     return json_data
