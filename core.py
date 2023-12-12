@@ -1066,7 +1066,7 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
     unce = json_data.get('无码')
     uncensored = int(unce) if isinstance(unce, bool) else int(is_uncensored(number))
 
-    if '流出' in movie_path or 'uncensored' in movie_path.lower():
+    if ('流出' in movie_path or 'uncensored' in movie_path.lower()) and not unce:
         liuchu = '流出'
         leak = True
         leak_word = '-无码流出'  # 流出影片后缀

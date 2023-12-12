@@ -562,7 +562,7 @@ def main(args: tuple) -> Path:
             check_update(version)
             # Download Mapping Table, parallel version
             def fmd(f) -> typing.Tuple[str, Path]:
-                return ('https://raw.githubusercontent.com/yoshiko2/Movie_Data_Capture/master/MappingTable/' + f,
+                return ('https://raw.githubusercontent.com/mouxmouxmoux/Movie_Data_Capture/master/MappingTable/' + f,
                         Path.home() / '.local' / 'share' / 'mdc' / f)
 
             map_tab = (fmd('mapping_actor.xml'), fmd('mapping_info.xml'), fmd('c_number.json'))
@@ -618,11 +618,18 @@ def main(args: tuple) -> Path:
             create_data_and_move_with_custom_number(single_file_path, custom_number, oCC,
                                                     specified_source, specified_url)
     else:
-        folder_path = conf.source_folder()
-        if not isinstance(folder_path, str) or folder_path == '':
-            folder_path = os.path.abspath(".")
-
-        movie_list = movie_lists(folder_path, regexstr)
+        #### added by bwyun ####
+        #### 多源文件夹支持 ####
+        #folder_path = conf.source_folder()
+        folder_path_str = conf.source_folder()
+        folder_path_list = folder_path_str.split("|")
+        movie_list = list()
+        for folder_path in folder_path_list:
+            if not isinstance(folder_path, str) or folder_path == '':
+                folder_path = os.path.abspath(".")
+            movie_list.extend(movie_lists(folder_path, regexstr))
+        #### 多源文件夹支持完毕 ####
+        #### added by bwyun end ####
 
         count = 0
         count_all = str(len(movie_list))

@@ -110,6 +110,12 @@ def get_data_from_json(
     title = json_data.get('title')
     actor_list = str(json_data.get('actor')).strip("[ ]").replace("'", '').split(',')  # 字符串转列表
     actor_list = [actor.strip() for actor in actor_list]  # 去除空白
+    # ===== 去除title里的演员名 ===
+    for actor_it in actor_list:
+        idx = title.rfind(actor_it)
+        length = len(actor_it)
+        title = (title[:idx] + title[idx + length:]).strip()
+    # ===== 去除title里的演员名 end ===
     director = json_data.get('director')
     release = json_data.get('release')
     number = json_data.get('number')
