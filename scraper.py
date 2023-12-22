@@ -32,8 +32,10 @@ def get_data_from_json(
     :return 给定影片名称的具体信息
     """
     try:
-        actor_mapping_data = etree.parse(str(Path.home() / '.local' / 'share' / 'mdc' / 'mapping_actor.xml'))
-        info_mapping_data = etree.parse(str(Path.home() / '.local' / 'share' / 'mdc' / 'mapping_info.xml'))
+        #actor_mapping_data = etree.parse(str(Path.home() / '.local' / 'share' / 'mdc' / 'mapping_actor.xml'))
+        #info_mapping_data = etree.parse(str(Path.home() / '.local' / 'share' / 'mdc' / 'mapping_info.xml'))
+        actor_mapping_data = etree.parse(str(Path.cwd() / '.mdc' / 'mapping_actor.xml'))
+        info_mapping_data = etree.parse(str(Path.cwd() / '.mdc' / 'mapping_info.xml'))
     except:
         actor_mapping_data = etree.fromstring("<html></html>", etree.HTMLParser())
         info_mapping_data = etree.fromstring("<html></html>", etree.HTMLParser())
@@ -229,7 +231,8 @@ def get_data_from_json(
                 continue
             if translate_value == "title":
                 title_dict = json.loads(
-                    (Path.home() / '.local' / 'share' / 'mdc' / 'c_number.json').read_text(encoding="utf-8"))
+                    #(Path.home() / '.local' / 'share' / 'mdc' / 'c_number.json').read_text(encoding="utf-8"))
+                    (Path.cwd() / '.mdc' / 'c_number.json').read_text(encoding="utf-8"))
                 try:
                     json_data[translate_value] = title_dict[number]
                     continue

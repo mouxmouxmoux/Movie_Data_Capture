@@ -562,8 +562,10 @@ def main(args: tuple) -> Path:
             check_update(version)
             # Download Mapping Table, parallel version
             def fmd(f) -> typing.Tuple[str, Path]:
-                return ('https://raw.githubusercontent.com/mouxmouxmoux/Movie_Data_Capture/master/MappingTable/' + f,
-                        Path.home() / '.local' / 'share' / 'mdc' / f)
+                #return ('https://raw.githubusercontent.com/mouxmouxmoux/Movie_Data_Capture/main/MappingTable/' + f,
+                #        Path.home() / '.local' / 'share' / 'mdc' / f)
+                return ('https://raw.githubusercontent.com/mouxmouxmoux/Movie_Data_Capture/main/MappingTable/' + f,
+                        Path.cwd() / '.mdc' / f)
 
             map_tab = (fmd('mapping_actor.xml'), fmd('mapping_info.xml'), fmd('c_number.json'))
             for k, v in map_tab:
@@ -584,12 +586,13 @@ def main(args: tuple) -> Path:
             print('[!]' + '& update the mapping table'.center(54))
             print("[!]" + "".center(54, "="))
             try:
-                etree.parse(str(Path.home() / '.local' / 'share' / 'mdc' / 'mapping_actor.xml'))
+                #etree.parse(str(Path.home() / '.local' / 'share' / 'mdc' / 'mapping_actor.xml'))
+                etree.parse(str(Path.cwd() / '.mdc' / 'mapping_actor.xml'))
             except:
                 print('[!]' + "Failed to load mapping table".center(54))
                 print('[!]' + "".center(54, "="))
-
-    create_failed_folder(conf.failed_folder())
+    if conf.failed_move():
+        create_failed_folder(conf.failed_folder())
 
     # create OpenCC converter
     ccm = conf.cc_convert_mode()
@@ -690,7 +693,7 @@ def period(delta, pattern):
 
 
 if __name__ == '__main__':
-    version = '6.6.7'
+    version = '7.0.4.1'
     urllib3.disable_warnings()  # Ignore http proxy warning
     app_start = time.time()
 

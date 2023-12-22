@@ -385,8 +385,10 @@ def load_cookies(cookie_json_filename: str) -> typing.Tuple[typing.Optional[dict
     path_search_order = (
         Path.cwd() / filename,
         Path.home() / filename,
-        Path.home() / f".mdc/{filename}",
-        Path.home() / f".local/share/mdc/{filename}"
+        Path.cwd() / '.mdc/{filename}'
+        #Path.home() / f".mdc/{filename}",
+        #Path.home() / f".local/share/mdc/{filename}"
+
     )
     cookies_filename = None
     try:
