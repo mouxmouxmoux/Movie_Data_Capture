@@ -112,3 +112,4 @@ failed/*
 .vscode/launch.json
 
 .idea
+/.mdc/
