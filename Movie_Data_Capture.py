@@ -22,6 +22,19 @@ from ADC_function import file_modification_days, get_html, parallel_download_fil
 from number_parser import get_number
 from core import core_main, core_main_no_net_op, moveFailedFolder, debug_print
 
+
+def check_update(local_version):
+    htmlcode = get_html("https://api.github.com/repos/mouxmouxmoux/Movie_Data_Capture/releases/latest")
+    data = json.loads(htmlcode)
+    remote = int(data["tag_name"].replace(".", ""))
+    local_version = int(local_version.replace(".", ""))
+    if local_version < remote:
+        print("[*]" + ("* New update " + str(data["tag_name"]) + " *").center(54))
+        print("[*]" + "↓ Download ↓".center(54))
+        print("[*]https://github.com/mouxmouxmoux/Movie_Data_Capture/releases")
+        print("[*]======================================================")
+
+
 def argparse_function(ver: str) -> typing.Tuple[str, str, str, str, bool, bool, str, str]:
     conf = config.getInstance()
     parser = argparse.ArgumentParser(epilog=f"Load Config file '{conf.ini_path}'.")
@@ -353,8 +366,8 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
             continue  # 模式不等于3下跳过软连接和未配置硬链接刮削
         # 调试用0字节样本允许通过，去除小于120MB的广告'苍老师强力推荐.mp4'(102.2MB)'黑道总裁.mp4'(98.4MB)'有趣的妹子激情表演.MP4'(95MB)'有趣的臺灣妹妹直播.mp4'(15.1MB)
         movie_size = 0 if is_sym else full_name.stat().st_size  # 同上 符号链接不取stat()及st_size，直接赋0跳过小视频检测
-        # if 0 < movie_size < 125829120:  # 1024*1024*120=125829120
-        #     continue
+        if 0 < movie_size < 125829120:  # 1024*1024*120=125829120
+             continue
         if cliRE and not cliRE.search(absf) or trailerRE.search(full_name.name):
             continue
         if main_mode == 3:
@@ -523,6 +536,8 @@ def main(args: tuple) -> Path:
     print('[*]======================================================')
     print('[*]' + platform_total)
     print('[*]======================================================')
+    print('[*] - 严禁在墙内宣传本项目 - ')
+    print('[*]======================================================')
 
     start_time = time.time()
     print('[+]Start at', time.strftime("%Y-%m-%d %H:%M:%S"))
@@ -541,6 +556,38 @@ def main(args: tuple) -> Path:
                     "" if conf.stop_counter() == 0 else f", stop_counter={conf.stop_counter()}"
                     ) if not single_file_path else ('-', 'Single File', '', '', ''))
           )
+
+    if conf.update_check():
+        try:
+            check_update(version)
+            # Download Mapping Table, parallel version
+            def fmd(f) -> typing.Tuple[str, Path]:
+                return ('https://raw.githubusercontent.com/mouxmouxmoux/Movie_Data_Capture/master/MappingTable/' + f,
+                        Path.home() / '.local' / 'share' / 'mdc' / f)
+
+            map_tab = (fmd('mapping_actor.xml'), fmd('mapping_info.xml'), fmd('c_number.json'))
+            for k, v in map_tab:
+                if v.exists():
+                    if file_modification_days(str(v)) >= conf.mapping_table_validity():
+                        print("[+]Mapping Table Out of date! Remove", str(v))
+                        os.remove(str(v))
+            res = parallel_download_files(((k, v) for k, v in map_tab if not v.exists()))
+            for i, fp in enumerate(res, start=1):
+                if fp and len(fp):
+                    print(f"[+] [{i}/{len(res)}] Mapping Table Downloaded to {fp}")
+                else:
+                    print(f"[-] [{i}/{len(res)}] Mapping Table Download failed")
+        except:
+            print("[!]" + " WARNING ".center(54, "="))
+            print('[!]' + '-- GITHUB CONNECTION FAILED --'.center(54))
+            print('[!]' + 'Failed to check for updates'.center(54))
+            print('[!]' + '& update the mapping table'.center(54))
+            print("[!]" + "".center(54, "="))
+            try:
+                etree.parse(str(Path.home() / '.local' / 'share' / 'mdc' / 'mapping_actor.xml'))
+            except:
+                print('[!]' + "Failed to load mapping table".center(54))
+                print('[!]' + "".center(54, "="))
 
     create_failed_folder(conf.failed_folder())
 
@@ -571,11 +618,18 @@ def main(args: tuple) -> Path:
             create_data_and_move_with_custom_number(single_file_path, custom_number, oCC,
                                                     specified_source, specified_url)
     else:
-        folder_path = conf.source_folder()
-        if not isinstance(folder_path, str) or folder_path == '':
-            folder_path = os.path.abspath(".")
-
-        movie_list = movie_lists(folder_path, regexstr)
+        #### added by bwyun ####
+        #### 多源文件夹支持 ####
+        #folder_path = conf.source_folder()
+        folder_path_str = conf.source_folder()
+        folder_path_list = folder_path_str.split("|")
+        movie_list = list()
+        for folder_path in folder_path_list:
+            if not isinstance(folder_path, str) or folder_path == '':
+                folder_path = os.path.abspath(".")
+            movie_list.extend(movie_lists(folder_path, regexstr))
+        #### 多源文件夹支持完毕 ####
+        #### added by bwyun end ####
 
         count = 0
         count_all = str(len(movie_list))

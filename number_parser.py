@@ -7,13 +7,35 @@ import typing
 G_spat = re.compile(
     "^\w+\.(cc|com|net|me|club|jp|tv|xyz|biz|wiki|info|tw|us|de)@|^22-sht\.me|"
     "^(fhd|hd|sd|1080p|720p|4K)(-|_)|"
-    "(-|_)(fhd|hd|sd|1080p|720p|4K|x264|x265|uncensored|hack|leak)",
+    "(-|_)(fhd|hd|sd|1080p|720p|4K|x264|x265|uncensored|hack|leak|nyap2p\.com)",
     re.IGNORECASE)
 
 
 def get_number(debug: bool, file_path: str) -> str:
     """
-    从文件路径中提取号码 from number_parser import get_number
+    从文件路径中提取番号 from number_parser import get_number
+    >>> get_number(False, "/Users/Guest/AV_Data_Capture/snis-829.mp4")
+    'snis-829'
+    >>> get_number(False, "/Users/Guest/AV_Data_Capture/snis-829-C.mp4")
+    'snis-829'
+    >>> get_number(False, "/Users/Guest/AV_Data_Capture/[脸肿字幕组][PoRO]牝教師4～穢された教壇～ 「生意気ドジっ娘女教師・美結～高飛車ハメ堕ち2濁金」[720p][x264_aac].mp4")
+    '牝教師4～穢された教壇～ 「生意気ドジっ娘女教師・美結～高飛車ハメ堕ち2濁金」'
+    >>> get_number(False, "C:¥Users¥Guest¥snis-829.mp4")
+    'snis-829'
+    >>> get_number(False, "C:¥Users¥Guest¥snis-829-C.mp4")
+    'snis-829'
+    >>> get_number(False, "./snis-829.mp4")
+    'snis-829'
+    >>> get_number(False, "./snis-829-C.mp4")
+    'snis-829'
+    >>> get_number(False, ".¥snis-829.mp4")
+    'snis-829'
+    >>> get_number(False, ".¥snis-829-C.mp4")
+    'snis-829'
+    >>> get_number(False, "snis-829.mp4")
+    'snis-829'
+    >>> get_number(False, "snis-829-C.mp4")
+    'snis-829'
     """
     filepath = os.path.basename(file_path)
     # debug True 和 False 两块代码块合并，原因是此模块及函数只涉及字符串计算，没有IO操作，debug on时输出导致异常信息即可
@@ -79,7 +101,10 @@ def get_number(debug: bool, file_path: str) -> str:
         if debug:
             print(f'[-]Number Parser exception: {e} [{file_path}]')
         return None
+        
 
+
+# 按javdb数据源的命名规范提取number
 G_TAKE_NUM_RULES = {
     'tokyo.*hot': lambda x: str(re.search(r'(cz|gedo|k|n|red-|se)\d{2,4}', x, re.I).group()),
     'carib': lambda x: str(re.search(r'\d{6}(-|_)\d{3}', x, re.I).group()).replace('_', '-'),
@@ -146,7 +171,40 @@ if __name__ == "__main__":
     #     import doctest
     #     doctest.testmod(raise_on_error=True)
     test_use_cases = (
-        "ABC-123-C.mp4",
+        "MEYD-594-C.mp4",
+        "SSIS-001_C.mp4",
+        "SSIS100-C.mp4",
+        "SSIS101_C.mp4",
+        "ssni984.mp4",
+        "ssni666.mp4",
+        "SDDE-625_uncensored_C.mp4",
+        "SDDE-625_uncensored_leak_C.mp4",
+        "SDDE-625_uncensored_leak_C_cd1.mp4",
+        "Tokyo Hot n9001 FHD.mp4",  # 无-号，以前无法正确提取
+        "TokyoHot-n1287-HD SP2006 .mp4",
+        "caribean-020317_001.nfo",  # -号误命名为_号的
+        "257138_3xplanet_1Pondo_080521_001.mp4",
+        "ADV-R0624-CD3.wmv",  # 多碟影片
+        "XXX-AV   22061-CD5.iso",  # 支持片商格式 xxx-av-22061 命名规则来自javdb数据源
+        "xxx-av 20589.mp4",
+        "Muramura-102114_145-HD.wmv",  # 支持片商格式 102114_145  命名规则来自javdb数据源
+        "heydouga-4102-023-CD2.iso",  # 支持片商格式 heydouga-4102-023 命名规则来自javdb数据源
+        "HeyDOuGa4236-1048 Ai Qiu - .mp4",  # heydouga-4236-1048 命名规则来自javdb数据源
+        "pacopacomama-093021_539-FHD.mkv",  # 支持片商格式 093021_539 命名规则来自javdb数据源
+        "sbw99.cc@heyzo_hd_2636_full.mp4",
+        "hhd800.com@STARS-566-HD.mp4",
+        "jav20s8.com@GIGL-677_4K.mp4",
+        "sbw99.cc@iesp-653-4K.mp4",
+        "4K-ABP-358_C.mkv",
+        "n1012-CD1.wmv",
+        "[]n1012-CD2.wmv",
+        "rctd-460ch.mp4",  # 除支持-C硬字幕外，新支持ch硬字幕
+        "rctd-461CH-CD2.mp4",  # ch后可加CDn
+        "rctd-461-Cd3-C.mp4",  # CDn后可加-C
+        "rctd-461-C-cD4.mp4",  # cD1 Cd1 cd1 CD1 最终生成.nfo时统一为大写CD1
+        "MD-123.ts",
+        "MDSR-0001-ep2.ts",
+        "MKY-NS-001.mp4"
     )
 
 

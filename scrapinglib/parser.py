@@ -72,7 +72,7 @@ class Parser:
         return result
 
     def search(self, number):
-        """ 查询
+        """ 查询番号
 
         查询主要流程:
         1. 获取 url
@@ -109,7 +109,7 @@ class Parser:
             self.specifiedUrl = core.specifiedUrl
 
     def queryNumberUrl(self, number):
-        """ 根据号码查询详细信息url
+        """ 根据番号查询详细信息url
         
         需要针对不同站点修改,或者在上层直接获取
         备份查询页面,预览图可能需要
@@ -263,7 +263,7 @@ class Parser:
         return self.uncensored
 
     def getImagecut(self, htmltree):
-        """ 修正 poster不裁剪cover
+        """ 修正 无码poster不裁剪cover
         """
         # if self.imagecut == 1 and self.getUncensored(htmltree):
         #     self.imagecut = 0

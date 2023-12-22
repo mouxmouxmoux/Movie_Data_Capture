@@ -3,6 +3,7 @@ import json
 import secrets
 import typing
 from pathlib import Path
+import re
 
 # third party lib
 import opencc
@@ -48,11 +49,38 @@ def get_data_from_json(
     if config_proxy.enable:
         proxies = config_proxy.proxies()
 
+    # javdb website logic
+    # javdb have suffix
+    javdb_sites = conf.javdb_sites().split(',')
+    for i in javdb_sites:
+        javdb_sites[javdb_sites.index(i)] = "javdb" + i
+    javdb_sites.append("javdb")
+    # 不加载过期的cookie，javdb登录界面显示为7天免登录，故假定cookie有效期为7天
+    has_valid_cookie = False
+    for cj in javdb_sites:
+        javdb_site = cj
+        cookie_json = javdb_site + '.json'
+        cookies_dict, cookies_filepath = load_cookies(cookie_json)
+        if isinstance(cookies_dict, dict) and isinstance(cookies_filepath, str):
+            cdays = file_modification_days(cookies_filepath)
+            if cdays < 7:
+                javdb_cookies = cookies_dict
+                has_valid_cookie = True
+                break
+            elif cdays != 9999:
+                print(
+                    f'[!]Cookies file {cookies_filepath} was updated {cdays} days ago, it will not be used for HTTP requests.')
+    if not has_valid_cookie:
+        # get real random site from javdb_sites, because random is not really random when the seed value is known
+        javdb_site = secrets.choice(javdb_sites)
+        javdb_cookies = None
+
     ca_cert = None
     if conf.cacert_file():
         ca_cert = conf.cacert_file()
 
     json_data = search(file_number, sources, proxies=proxies, verify=ca_cert,
+                        dbsite=javdb_site, dbcookies=javdb_cookies,
                         morestoryline=conf.is_storyline(),
                         specifiedSource=specified_source, specifiedUrl=specified_url,
                         debug = conf.debug())
@@ -61,7 +89,10 @@ def get_data_from_json(
         print('[-]Movie Number not found!')
         return None
 
-    # 增加number严格判断，避免提交任何number
+    # 增加number严格判断，避免提交任何number，总是返回"本橋実来 ADZ335"，这种返回number不一致的数据源故障
+    # 目前选用number命名规则是javdb.com Domain Creation Date: 2013-06-19T18:34:27Z
+    # 然而也可以跟进关注其它命名规则例如airav.wiki Domain Creation Date: 2019-08-28T07:18:42.0Z
+    # 如果将来javdb.com命名规则下不同Studio出现同名碰撞导致无法区分，可考虑更换规则，更新相应的number分析和抓取代码。
     if str(json_data.get('number')).upper() != file_number.upper():
         try:
             if json_data.get('allow_number_change'):
@@ -79,6 +110,12 @@ def get_data_from_json(
     title = json_data.get('title')
     actor_list = str(json_data.get('actor')).strip("[ ]").replace("'", '').split(',')  # 字符串转列表
     actor_list = [actor.strip() for actor in actor_list]  # 去除空白
+    # ===== 去除title里的演员名 ===
+    for actor_it in actor_list:
+        idx = title.rfind(actor_it)
+        length = len(actor_it)
+        title = (title[:idx] + title[idx + length:]).strip()
+    # ===== 去除title里的演员名 end ===
     director = json_data.get('director')
     release = json_data.get('release')
     number = json_data.get('number')
@@ -89,7 +126,8 @@ def get_data_from_json(
     label = json_data.get('label')
     series = json_data.get('series')
     year = json_data.get('year')
-
+    userrating = json_data.get('userrating')
+    votes = json_data.get('uservotes')
     if json_data.get('cover_small'):
         cover_small = json_data.get('cover_small')
     else:
@@ -111,7 +149,24 @@ def get_data_from_json(
         tag.remove('XXXX')
     while 'xxx' in tag:
         tag.remove('xxx')
-    actor = str(actor_list).strip("[ ]").replace("'", '').replace(" ", '')
+    if json_data['source'] =='pissplay': # pissplay actor为英文名，不用去除空格
+        actor = str(actor_list).strip("[ ]").replace("'", '')
+    else:
+        actor = str(actor_list).strip("[ ]").replace("'", '').replace(" ", '')
+
+    #actor = str(actor_list).strip("[ ]").replace("'", '').replace(" ", '')
+    # added by moux begin
+    # actor不用逗号连接 并且只记录前3个
+    if len(actor_list) > 3:
+        actor= ']['.join(actor_list[0:3]).replace("'", '').replace(" ", '')
+    else:
+        actor= ']['.join(actor_list).replace("'", '').replace(" ", '')
+    if actor == '':
+        actor = '未知演员'
+    # added by moux end
+    if title == '' or number == '':
+        print('[-]Movie Number or Title not found!')
+        return None
 
     # if imagecut == '3':
     #     DownloadFileWithFilename()
@@ -141,6 +196,17 @@ def get_data_from_json(
     json_data['original_title'] = title
     json_data['actor'] = actor
     json_data['release'] = release
+    json_data['original_title'] = '[' + number + '][' + actor + '][' + release + ']' +  title
+    # added by moux begin
+    # 增加月份记录
+    json_data['release_month'] = str(release[5:7])
+     # 增加首位演员记录
+    first_actor = actor_list[0]
+    if first_actor == '':
+        json_data['first_actor'] = '未知演员'
+    else:
+        json_data['first_actor'] = first_actor
+    # added by moux end
     json_data['cover_small'] = cover_small
     json_data['tag'] = tag
     json_data['year'] = year
@@ -152,12 +218,23 @@ def get_data_from_json(
     json_data['series'] = series
     json_data['studio'] = studio
     json_data['director'] = director
+    json_data['userrating'] = userrating
+    json_data['votes'] = votes
+
 
     if conf.is_translate():
         translate_values = conf.translate_values().split(",")
         for translate_value in translate_values:
             if json_data[translate_value] == "":
                 continue
+            if translate_value == "title":
+                title_dict = json.loads(
+                    (Path.home() / '.local' / 'share' / 'mdc' / 'c_number.json').read_text(encoding="utf-8"))
+                try:
+                    json_data[translate_value] = title_dict[number]
+                    continue
+                except:
+                    pass
             if conf.get_translate_engine() == "azure":
                 t = translate(
                     json_data[translate_value],
@@ -198,20 +275,48 @@ def get_data_from_json(
         for cc in cc_vars:
             if json_data[cc] == "" or len(json_data[cc]) == 0:
                 continue
-            try:
-                if ccm == 1:
-                    json_data[cc] = convert(info_mapping_data, "zh_cn", json_data[cc])
-                    json_data[cc] = delete_all_elements_in_str("删除", json_data[cc])
-                elif ccm == 2:
-                    json_data[cc] = convert(info_mapping_data, "zh_tw", json_data[cc])
-                    json_data[cc] = delete_all_elements_in_str("删除", json_data[cc])
-                elif ccm == 3:
-                    json_data[cc] = convert(info_mapping_data, "jp", json_data[cc])
-                    json_data[cc] = delete_all_elements_in_str("删除", json_data[cc])
-            except IndexError:
-                json_data[cc] = open_cc.convert(json_data[cc])
-            except:
-                pass
+            if cc == "actor":
+                try:
+                    if ccm == 1:
+                        json_data['actor_list'] = convert_list(actor_mapping_data, "zh_cn", json_data['actor_list'])
+                        json_data['actor'] = convert(actor_mapping_data, "zh_cn", json_data['actor'])
+                    elif ccm == 2:
+                        json_data['actor_list'] = convert_list(actor_mapping_data, "zh_tw", json_data['actor_list'])
+                        json_data['actor'] = convert(actor_mapping_data, "zh_tw", json_data['actor'])
+                    elif ccm == 3:
+                        json_data['actor_list'] = convert_list(actor_mapping_data, "jp", json_data['actor_list'])
+                        json_data['actor'] = convert(actor_mapping_data, "jp", json_data['actor'])
+                except:
+                    json_data['actor_list'] = [open_cc.convert(aa) for aa in json_data['actor_list']]
+                    json_data['actor'] = open_cc.convert(json_data['actor'])
+            elif cc == "tag":
+                try:
+                    if ccm == 1:
+                        json_data[cc] = convert_list(info_mapping_data, "zh_cn", json_data[cc])
+                        json_data[cc] = delete_all_elements_in_list("删除", json_data[cc])
+                    elif ccm == 2:
+                        json_data[cc] = convert_list(info_mapping_data, "zh_tw", json_data[cc])
+                        json_data[cc] = delete_all_elements_in_list("删除", json_data[cc])
+                    elif ccm == 3:
+                        json_data[cc] = convert_list(info_mapping_data, "jp", json_data[cc])
+                        json_data[cc] = delete_all_elements_in_list("删除", json_data[cc])
+                except:
+                    json_data[cc] = [open_cc.convert(t) for t in json_data[cc]]
+            else:
+                try:
+                    if ccm == 1:
+                        json_data[cc] = convert(info_mapping_data, "zh_cn", json_data[cc])
+                        json_data[cc] = delete_all_elements_in_str("删除", json_data[cc])
+                    elif ccm == 2:
+                        json_data[cc] = convert(info_mapping_data, "zh_tw", json_data[cc])
+                        json_data[cc] = delete_all_elements_in_str("删除", json_data[cc])
+                    elif ccm == 3:
+                        json_data[cc] = convert(info_mapping_data, "jp", json_data[cc])
+                        json_data[cc] = delete_all_elements_in_str("删除", json_data[cc])
+                except IndexError:
+                    json_data[cc] = open_cc.convert(json_data[cc])
+                except:
+                    pass
 
     naming_rule = ""
     original_naming_rule = ""
@@ -228,6 +333,7 @@ def get_data_from_json(
                 item = json_data.get('original_title')
             original_naming_rule += item if type(item) is not list else "&".join(item)
 
+    naming_rule = naming_rule_special_characters_replacement(naming_rule)
     json_data['naming_rule'] = naming_rule
     json_data['original_naming_rule'] = original_naming_rule
     return json_data
@@ -251,3 +357,10 @@ def special_characters_replacement(text) -> str:
             replace('&amp;', '＆').
             replace("&", '＆')
             )
+
+def naming_rule_special_characters_replacement(text) -> str:
+    if not isinstance(text, str):
+        return text
+    r_str = r"[\/\\\:\*\?\"\<\>#\.\|\n\s/\:*?\"<>\|~，、。？！@#￥%……&*（）——+：；《》]+~"
+    new_title = re.sub('__', '_', re.sub(r_str, "_", special_characters_replacement(text)))
+    return (new_title)
