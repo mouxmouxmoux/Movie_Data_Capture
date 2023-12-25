@@ -113,10 +113,13 @@ def get_data_from_json(
     actor_list = str(json_data.get('actor')).strip("[ ]").replace("'", '').split(',')  # 字符串转列表
     actor_list = [actor.strip() for actor in actor_list]  # 去除空白
     # ===== 去除title里的演员名 ===
+    def remove_last_substring(a: str, b: str) -> str:
+        if b in a:
+            return a[:a.rfind(b)] + a[a.rfind(b) + len(b):]
+        else:
+            return a
     for actor_it in actor_list:
-        idx = title.rfind(actor_it)
-        length = len(actor_it)
-        title = (title[:idx] + title[idx + length:]).strip()
+        title = remove_last_substring(title, actor_it)
     # ===== 去除title里的演员名 end ===
     director = json_data.get('director')
     release = json_data.get('release')
@@ -227,11 +230,11 @@ def get_data_from_json(
     if conf.is_translate():
         translate_values = conf.translate_values().split(",")
         for translate_value in translate_values:
+            translate_value=translate_value.strip()
             if json_data[translate_value] == "":
                 continue
             if translate_value == "title":
                 title_dict = json.loads(
-                    #(Path.home() / '.local' / 'share' / 'mdc' / 'c_number.json').read_text(encoding="utf-8"))
                     (Path.cwd() / '.mdc' / 'c_number.json').read_text(encoding="utf-8"))
                 try:
                     json_data[translate_value] = title_dict[number]
