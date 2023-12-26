@@ -4,6 +4,7 @@ import secrets
 import typing
 from pathlib import Path
 import re
+from zhon.hanzi import punctuation as pun_zh
 
 # third party lib
 import opencc
@@ -198,7 +199,7 @@ def get_data_from_json(
 
     # 返回处理后的json_data
     json_data['title'] = title
-    json_data['original_title'] = title
+    #json_data['original_title'] = title
     json_data['actor'] = actor
     json_data['release'] = release
     json_data['original_title'] = '[' + number + '][' + actor + '][' + release + ']' +  title
@@ -227,7 +228,7 @@ def get_data_from_json(
     json_data['votes'] = votes
 
 
-    if conf.is_translate():
+    if conf.is_translate() and  '[local]' not in json_data['source']:
         translate_values = conf.translate_values().split(",")
         for translate_value in translate_values:
             translate_value=translate_value.strip()
@@ -260,7 +261,7 @@ def get_data_from_json(
                         list_in_str = ",".join(json_data[translate_value])
                         json_data[translate_value] = translate(list_in_str).split(',')
 
-    if open_cc:
+    if open_cc and  '[local]' not in json_data['source']:
         cc_vars = conf.cc_convert_vars().split(",")
         ccm = conf.cc_convert_mode()
 
@@ -345,10 +346,20 @@ def get_data_from_json(
     return json_data
 
 
-def special_characters_replacement(text) -> str:
-    if not isinstance(text, str):
-        return text
-    return (text.replace('\\', '∖').  # U+2216 SET MINUS @ Basic Multilingual Plane
+def special_characters_replacement(content) -> str:
+    if not isinstance(content, str):
+        return content
+    pat_list = ["₰", "¥", "《", "￥", "€", "$", "₤", "₳", "¢", "¤", "฿", "฿", "₵", "₡", "₫", "₲", "₭", "£", "₥", "₦", "₱",
+                "〒", "₮", "₩", "₴", "₪", "៛", "﷼", "₢", "ℳ", "₯", "₠", "₣", "₧", "ƒ", "●"]
+    #punctuation_string_en = string.punctuation  # 英文字符
+    #for i in punctuation_string_en:
+    #    content = content.replace(i, '')
+    for i in pun_zh:
+        content = content.replace(i, '')
+    for i in pat_list:
+        content = content.replace(i, '')
+
+    return (content.replace('\\', '∖').  # U+2216 SET MINUS @ Basic Multilingual Plane
             replace('/', '∕').  # U+2215 DIVISION SLASH @ Basic Multilingual Plane
             replace(':', '꞉').  # U+A789 MODIFIER LETTER COLON @ Latin Extended-D
             replace('*', '∗').  # U+2217 ASTERISK OPERATOR @ Basic Multilingual Plane

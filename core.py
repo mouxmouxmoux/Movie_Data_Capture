@@ -1,23 +1,17 @@
-import json
 import os.path
-import os
 import pathlib
-import re
 import shutil
-import sys
-
 from PIL import Image
 from io import BytesIO
-from datetime import datetime
-from lxml import etree
 
+import sqlmodel
 from ADC_function import *
 from scraper import get_data_from_json
 from number_parser import is_uncensored
 from ImageProcessing import cutImage
 
+from sqlmodel import *
 
-# from WebCrawler import get_data_from_json
 
 def escape_path(path, escape_literals: str):  # Remove escape literals
     backslash = '\\'
@@ -121,6 +115,9 @@ def create_folder(json_data,addon):  # 创建文件夹
     success_folder = conf.success_folder()
     actor = json_data.get('actor')
     location_rule = eval(conf.location_rule(), json_data)
+    if 'actor' in conf.location_rule() and len(actor) > 100:
+        print(conf.location_rule())
+        location_rule = eval(conf.location_rule().replace("actor", "'多人作品'"), json_data)
     maxlen = conf.max_title_len()
     if 'title' in conf.location_rule() and len(title) > maxlen:
         shorttitle = title[0:maxlen]
@@ -351,6 +348,7 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
     conf = config.getInstance()
     title, studio, year, outline, runtime, director, actor_photo, release, number, cover, trailer, website, series, label = get_info(
         json_data)
+
     if config.getInstance().main_mode() == 3:  # 模式3下，由于视频文件不做任何改变，.nfo文件必须和视频文件名称除后缀外完全一致，KODI等软件方可支持
         nfo_path = str(Path(filepath).with_suffix('.nfo'))
     else:
@@ -381,6 +379,7 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
             outline = f"{outline}"
         else:
             outline = f"{number}#{outline}"
+
         with open(nfo_path, "wt", encoding='UTF-8') as code:
             print('<?xml version="1.0" encoding="UTF-8" ?>', file=code)
             print("<movie>", file=code)
@@ -892,6 +891,7 @@ def debug_print(data: json):
         pass
 
 
+
 def core_main_no_net_op(movie_path, number):
     conf = config.getInstance()
     part = ''
@@ -1113,24 +1113,34 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
     cover = json_data.get('cover')
     ext = image_ext(cover)
 
-    fanart_path = f"fanart{ext}"
-    poster_path = f"poster{ext}"
-    thumb_path = f"thumb{ext}"
-    if config.getInstance().image_naming_with_number():
-        fanart_path = f"{number}{leak_word}{c_word}{hack_word}-fanart{ext}"
-        poster_path = f"{number}{leak_word}{c_word}{hack_word}-poster{ext}"
-        thumb_path = f"{number}{leak_word}{c_word}{hack_word}-thumb{ext}"
+    #fanart_path = f"fanart{ext}"
+    #poster_path = f"poster{ext}"
+    #thumb_path = f"thumb{ext}"
+    #if config.getInstance().image_naming_with_number():
+    #    fanart_path = f"{number}{leak_word}{c_word}{hack_word}-fanart{ext}"
+    #    poster_path = f"{number}{leak_word}{c_word}{hack_word}-poster{ext}"
+    #    thumb_path = f"{number}{leak_word}{c_word}{hack_word}-thumb{ext}"
 
     # added by moux begin
     # fanart_path poster_path thumb_path 按照自定义文字输出
     # 增加videofile_path_pre 按照自定义文字输出视频文件名
     # 修改thumb_path 为-cover 为预览图生成空出文件名
+
     fanart_path = f"{json_data.get('naming_rule')}{addon}-fanart{ext}"
     poster_path = f"{json_data.get('naming_rule')}{addon}-poster{ext}"
     thumb_path = f"{json_data.get('naming_rule')}{addon}-cover{ext}"
     videofile_path_pre = ''
     videofile_path_pre = f"{json_data.get('naming_rule')}{addon}"
     # added by moux end
+
+    # 增加写入数据库操作，用于后续整理减少爬取过程 by mouxwu
+    if '[local]' not in json_data['source']:
+        # 有[local]字样 说明读取自数据库 则不需要再写入一遍数据
+        try:
+            javDB = sqlmodel.JavInfo()
+            javDB.addto_localDB(json_data)
+        except:
+            pass
 
     # main_mode
     #  1: 刮削模式 / Scraping mode
@@ -1270,3 +1280,4 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
                     tag, json_data.get('actor_list'), liuchu, uncensored, hack, hack_word, _4k, fanart_path,
                     poster_path,
                     thumb_path, iso)
+
